@@ -1,8 +1,8 @@
-const { sendVerificationEmail } = require('../services/email.service');
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const User = require('../models/user.model');
 const bcrypt = require('bcryptjs');
+const { sendVerificationEmail } = require('../services/email.service');
 
 const registerController = async (req, res) => {
     const { name, email, password } = req.body;
@@ -21,9 +21,13 @@ const registerController = async (req, res) => {
     const verificationTokenExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
     const user = await User.create({ name, email, password: hashedPassword, verificationToken, verificationTokenExpires });
-    await sendVerificationEmail(email, name, verificationToken);
-    console.log(`Verification email sent`);
-    res.status(201).json({ message: 'User registered successfully.Please check your email to verify your account.', user: { id: user._id, name: user.name, email: user.email } });
+    try {
+        await sendVerificationEmail(email, name, verificationToken);
+        console.log('Verification email sent');
+    } catch (emailErr) {
+        console.error('Verification email failed:', emailErr.message);
+    }
+    res.status(201).json({ message: 'User registered successfully. Please check your email to verify your account.', user: { id: user._id, name: user.name, email: user.email } });
 };
 
 const verifyEmailController = async (req, res) => {
